@@ -1,15 +1,11 @@
 <div class="login-container" >
-  <h1 >Parent Page</h1>
+  <h1>Child3 Page</h1>
   <p>Logged in user: {{ loggedInUser || 'None' }}</p>
 
   <input type="text" placeholder="Username" [(ngModel)]="username">
   <input type="email" placeholder="Email" [(ngModel)]="email">
   <input type="password" placeholder="Password" [(ngModel)]="password">
   <button (click)="login()">Login</button>
-
+  
 </div>
-<iframe id="childFrame1" src="http://localhost:4300" width="500" height="500"></iframe>
-
-<iframe id="childFrame2" src="http://localhost:4400" width="500" height="500"></iframe>
-
-<iframe id="childFrame3" src="http://localhost:4500" width="500" height="500"></iframe>
+<iframe id="parentFrame" src="http://localhost:4200" width="500" height="500"></iframe>

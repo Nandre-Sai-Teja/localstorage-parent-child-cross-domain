@@ -10,7 +10,7 @@ import { RouterOutlet } from '@angular/router';
   styleUrl: './app.component.css'
 })
 export class AppComponent implements AfterViewInit, OnInit {
-  title = 'child1';
+  title = 'child3';
   username: string = '';
   email: string = '';
   password: string = '';
