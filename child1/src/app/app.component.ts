@@ -5,7 +5,7 @@ import { RouterOutlet } from '@angular/router';
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterOutlet, FormsModule],
+  imports: [RouterOutlet, FormsModule, ],
   templateUrl: './app.component.html',
   styleUrl: './app.component.css'
 })
@@ -20,13 +20,15 @@ export class AppComponent implements AfterViewInit, OnInit {
   private retryCount = 0;
   private readonly maxRetries = 5;
 
-  ngOnInit() {
+
+
+  ngOnInit() { //runs after the component creation
     // Initialize early to handle fast responses
     window.addEventListener('message', this.handleMessage.bind(this));
   }
 
-  ngAfterViewInit() {
-    this.parentIframe = document.getElementById('parentFrame') as HTMLIFrameElement;
+  ngAfterViewInit() { //runs after the view has been initialized
+    this.parentIframe = document.getElementById('parentFrame') as HTMLIFrameElement; //typecasted into HTMLIFrameElement to ensure it is treated as an iframe
     
     // Add load event listener to parent iframe
     this.parentIframe?.addEventListener('load', () => {
@@ -34,7 +36,7 @@ export class AppComponent implements AfterViewInit, OnInit {
     });
 
     // Initial request with retry mechanism
-    this.requestUserDataWithRetry();
+    this.requestUserDataWithRetry(); //request user data multiple times if needed
   }
 
   requestUserData() {
@@ -43,7 +45,8 @@ export class AppComponent implements AfterViewInit, OnInit {
         }, this.parentOrigin);
       }
 
-  private requestUserDataWithRetry() {
+      //private so that only in this it can be called, outsode components will not be able to access this
+  private requestUserDataWithRetry() { //handle when parent page(iframe) is not loaded that fast, if we dont use this then requestUserData is called only once which may not work when the parent page (iframe) is not loaded
     if (this.retryCount >= this.maxRetries) return;
     
     if (!this.parentIframe?.contentWindow) {
@@ -53,7 +56,8 @@ export class AppComponent implements AfterViewInit, OnInit {
       }, 300);
       return;
     }
-
+    //if the iframe is not available, it waits 300ms and tries again
+    //sends another request after 1 second if no data is found
     this.getParentIframe()?.contentWindow?.postMessage({
       action: 'GET_USER_REQUEST'
     }, this.parentOrigin);
@@ -76,6 +80,7 @@ export class AppComponent implements AfterViewInit, OnInit {
     if (action === 'LOGIN_RESPONSE' || action === 'GET_USER_RESPONSE') {
       this.loggedInUser = data?.username || null;
     }
+
   }
 
   login() {
