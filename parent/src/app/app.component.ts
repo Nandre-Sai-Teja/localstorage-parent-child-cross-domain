@@ -9,29 +9,47 @@ import { RouterOutlet } from '@angular/router';
   templateUrl: './app.component.html',
   styleUrl: './app.component.css'
 })
-export class AppComponent implements AfterViewInit{
+export class AppComponent implements AfterViewInit {
   title = 'parent';
   username: string = '';
   email: string = '';
   password: string = '';
   loggedInUser: string | null = null;
   childOrigin = 'http://localhost:4300';
+  private childIframeLoaded = false;
 
   ngAfterViewInit() {
-    //listens for post message events from the child page
-    window.addEventListener('message', this.handleMessage.bind(this)); //bind ensures that it has the correct this context
+    const childIframe = document.getElementById('childFrame') as HTMLIFrameElement;
+    
+    // Listen for iframe load event
+    childIframe.addEventListener('load', () => {
+      this.childIframeLoaded = true;
+      this.checkExistingUser();
+    });
+
+    window.addEventListener('message', this.handleMessage.bind(this));
     this.checkExistingUser();
   }
 
   handleMessage(event: MessageEvent) {
-    if (event.origin !== this.childOrigin) return;
-    //extracts action and data from the received message
+    // Accept messages from child or same origin
+    if (event.origin !== this.childOrigin && event.origin !== window.location.origin) return;
+    
     const { action, data } = event.data;
 
     if (action === 'LOGIN_REQUEST') {
       this.processLogin(data, event.source as Window, event.origin);
     } else if (action === 'GET_USER_REQUEST') {
       this.sendUserData(event.source as Window, event.origin);
+    } else if (action === 'CHILD_READY') {
+      this.sendCurrentUserToChild();
+    }
+  }
+
+  private sendCurrentUserToChild() {
+    const userData = JSON.parse(localStorage.getItem('currentUser') || 'null');
+    if (userData) {
+      this.notifyChild(userData);
     }
   }
 
@@ -50,21 +68,25 @@ export class AppComponent implements AfterViewInit{
     localStorage.setItem('currentUser', JSON.stringify(userData));
     this.loggedInUser = userData.username;
 
+    // Notify both the source and the child iframe
+    if (sourceWindow !== window) {
+      sourceWindow.postMessage({
+        action: 'LOGIN_RESPONSE',
+        data: userData
+      }, origin);
+    }
+    
     this.notifyChild(userData);
-    sourceWindow.postMessage({
-      action: 'LOGIN_RESPONSE',
-      data: userData
-    }, origin);
   }
 
   notifyChild(userData: any) {
+    if (!this.childIframeLoaded) return;
+
     const childIframe = document.getElementById('childFrame') as HTMLIFrameElement;
-    if (childIframe && childIframe.contentWindow) {
-      childIframe.contentWindow.postMessage({
-        action: 'LOGIN_RESPONSE',
-        data: userData
-      }, this.childOrigin);
-    }
+    childIframe?.contentWindow?.postMessage({
+      action: 'LOGIN_RESPONSE',
+      data: userData
+    }, this.childOrigin);
   }
 
   sendUserData(targetWindow: Window, origin: string) {
@@ -75,10 +97,25 @@ export class AppComponent implements AfterViewInit{
     }, origin);
   }
 
+  // checkExistingUser() {
+  //   const userData = JSON.parse(localStorage.getItem('currentUser') || 'null');
+  //   if (userData?.username) {
+  //     this.loggedInUser = userData.username;
+  //     this.notifyChild(userData);
+  //   }
+  // }
+
   checkExistingUser() {
     const userData = JSON.parse(localStorage.getItem('currentUser') || 'null');
     if (userData?.username) {
       this.loggedInUser = userData.username;
+      // Notify any existing child frames
+      this.notifyChild(userData);
+      // Also send to the parent window (for the child's main page)
+      window.postMessage({
+        action: 'GET_USER_RESPONSE',
+        data: userData
+      }, window.location.origin);
     }
   }
 
@@ -89,6 +126,7 @@ export class AppComponent implements AfterViewInit{
       password: this.password
     };
 
+    // Process login directly and notify child
     this.processLogin(userData, window, window.location.origin);
   }
 }
